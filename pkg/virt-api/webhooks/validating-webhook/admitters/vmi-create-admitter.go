@@ -719,16 +719,6 @@ func validateNUMA(field *k8sfield.Path, spec *v1.VirtualMachineInstanceSpec, con
 				Field: field.Child("domain", "cpu", "numa", "guestMappingPassthrough").String(),
 			})
 		}
-		if spec.Domain.Memory == nil || spec.Domain.Memory.Hugepages == nil {
-			causes = append(causes, metav1.StatusCause{
-				Type: metav1.CauseTypeFieldValueInvalid,
-				Message: fmt.Sprintf("%s must be requested when NUMA topology strategy is set in %s",
-					field.Child("domain", "memory", "hugepages").String(),
-					field.Child("domain", "cpu", "numa", "guestMappingPassthrough").String(),
-				),
-				Field: field.Child("domain", "cpu", "numa", "guestMappingPassthrough").String(),
-			})
-		}
 	}
 	return causes
 }

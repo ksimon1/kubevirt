@@ -79,8 +79,15 @@ var _ = Describe("NumaPlacement", func() {
 		givenVMI.Spec.Domain.Memory = &v1.Memory{Guest: &memory}
 	})
 
-	It("should not map the numa topology without hugepages requested", func() {
-		Expect(numaMapping(givenVMI, givenSpec, givenTopology)).ToNot(Succeed())
+	It("should map the numa topology without hugepages requested", func() {
+		Expect(numaMapping(givenVMI, givenSpec, givenTopology)).To(Succeed())
+		// Verify basic NUMA topology is created
+		Expect(givenSpec.CPU.NUMA).ToNot(BeNil())
+		Expect(givenSpec.NUMATune).ToNot(BeNil())
+		// Verify no hugepage configuration is added when hugepages are not enabled
+		if givenSpec.MemoryBacking != nil && givenSpec.MemoryBacking.HugePages != nil {
+			Expect(givenSpec.MemoryBacking.HugePages.HugePage).To(BeEmpty())
+		}
 	})
 
 	DescribeTable("it should do nothing", func(givenTopology *cmdv1.Topology) {

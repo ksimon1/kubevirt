@@ -1578,23 +1578,20 @@ var _ = Describe("Validating VMICreate Admitter", func() {
 			Expect(causes[0].Field).To(Equal("fake.domain.cpu.numa.guestMappingPassthrough"))
 		})
 
-		DescribeTable("should reject NUMA passthrough without hugepages", func(memory *v1.Memory) {
+		It("should accept NUMA passthrough without hugepages", func() {
 			vmi.Spec.Domain.CPU.NUMA = &v1.NUMA{GuestMappingPassthrough: &v1.NUMAGuestMappingPassthrough{}}
 			vmi.Spec.Domain.CPU.Cores = 4
 			vmi.Spec.Domain.Resources.Limits = k8sv1.ResourceList{
 				k8sv1.ResourceCPU: resource.MustParse("4"),
 			}
 			vmi.Spec.Domain.CPU.DedicatedCPUPlacement = true
-			vmi.Spec.Domain.Memory = memory
+			// No hugepages specified
+			vmi.Spec.Domain.Memory = &v1.Memory{}
 			causes := ValidateVirtualMachineInstanceSpec(k8sfield.NewPath("fake"), &vmi.Spec, config)
-			Expect(causes).To(HaveLen(1))
-			Expect(causes[0].Field).To(Equal("fake.domain.cpu.numa.guestMappingPassthrough"))
-		},
-			Entry("with no memory element", nil),
-			Entry("with no hugepages element", &v1.Memory{Hugepages: nil}),
-		)
+			Expect(causes).To(BeEmpty())
+		})
 
-		It("should accept NUMA passthrough with DedicatedCPUPlacement", func() {
+		It("should accept NUMA passthrough with DedicatedCPUPlacement and hugepages", func() {
 			vmi.Spec.Domain.Memory = &v1.Memory{Hugepages: &v1.Hugepages{PageSize: "2Mi"}}
 			vmi.Spec.Domain.CPU.Cores = 4
 			vmi.Spec.Domain.CPU.NUMA = &v1.NUMA{GuestMappingPassthrough: &v1.NUMAGuestMappingPassthrough{}}

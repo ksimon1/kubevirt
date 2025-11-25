@@ -603,20 +603,25 @@ func numaMapping(vmi *v12.VirtualMachineInstance, domain *api.DomainSpec, topolo
 	}
 
 	domain.CPU.NUMA = &api.NUMA{}
+
+	// Preserve existing MemNodes if NUMATune already exists (e.g., for live migration scenarios)
+	var existingMemNodes []api.MemNode
+	if domain.NUMATune != nil {
+		existingMemNodes = domain.NUMATune.MemNodes
+	}
+
 	domain.NUMATune = &api.NUMATune{
 		Memory: api.NumaTuneMemory{
 			Mode:    "strict",
 			NodeSet: strings.Join(involvedCellIDs, ","),
 		},
+		MemNodes: existingMemNodes,
 	}
 
 	hugepagesSize, hugepagesUnit, hugepagesEnabled, err := hugePagesInfo(vmi, domain)
 	if err != nil {
 		return fmt.Errorf("failed to determine if hugepages are enabled: %v", err)
-	} else if !hugepagesEnabled {
-		return fmt.Errorf("passing through a numa topology is restricted to VMIs with hugepages enabled")
 	}
-	domain.MemoryBacking.Allocation = &api.MemoryAllocation{Mode: api.MemoryAllocationModeImmediate}
 
 	memory, err := QuantityToByte(*GetVirtualMemory(vmi))
 	memoryBytes := memory.Value
@@ -625,14 +630,20 @@ func numaMapping(vmi *v12.VirtualMachineInstance, domain *api.DomainSpec, topolo
 	}
 	var mod uint64
 	cellCount := uint64(len(involvedCellIDs))
-	if memoryBytes < cellCount*hugepagesSize {
-		return fmt.Errorf("not enough memory requested to allocate at least one hugepage per numa node: %v < %v", memory, cellCount*(hugepagesSize*1024*1024))
-	} else if memoryBytes%hugepagesSize != 0 {
-		return fmt.Errorf("requested memory can't be divided through the numa page size: %v mod %v != 0", memory, hugepagesSize)
-	}
-	mod = memoryBytes % (hugepagesSize * cellCount) / hugepagesSize
-	if mod != 0 {
-		memoryBytes = memoryBytes - mod*hugepagesSize
+
+	if hugepagesEnabled {
+		// When hugepages are enabled, we need to ensure proper alignment
+		domain.MemoryBacking.Allocation = &api.MemoryAllocation{Mode: api.MemoryAllocationModeImmediate}
+
+		if memoryBytes < cellCount*hugepagesSize {
+			return fmt.Errorf("not enough memory requested to allocate at least one hugepage per numa node: %v < %v", memory, cellCount*(hugepagesSize*1024*1024))
+		} else if memoryBytes%hugepagesSize != 0 {
+			return fmt.Errorf("requested memory can't be divided through the numa page size: %v mod %v != 0", memory, hugepagesSize)
+		}
+		mod = memoryBytes % (hugepagesSize * cellCount) / hugepagesSize
+		if mod != 0 {
+			memoryBytes = memoryBytes - mod*hugepagesSize
+		}
 	}
 
 	virtualCellID := -1
@@ -650,26 +661,43 @@ func numaMapping(vmi *v12.VirtualMachineInstance, domain *api.DomainSpec, topolo
 				Memory: memoryBytes / uint64(len(numamap)),
 				Unit:   memory.Unit,
 			})
-			domain.NUMATune.MemNodes = append(domain.NUMATune.MemNodes, api.MemNode{
-				CellID:  uint32(virtualCellID),
-				Mode:    "strict",
-				NodeSet: strconv.Itoa(int(cell.Id)),
-			})
-			domain.MemoryBacking.HugePages.HugePage = append(domain.MemoryBacking.HugePages.HugePage, api.HugePage{
-				Size:    strconv.Itoa(int(hugepagesSize)),
-				Unit:    hugepagesUnit,
-				NodeSet: strconv.Itoa(virtualCellID),
-			})
+			// Check if a MemNode with the same CellID already exists
+			existingMemNodeIndex := -1
+			for i, memNode := range domain.NUMATune.MemNodes {
+				if memNode.CellID == uint32(virtualCellID) {
+					existingMemNodeIndex = i
+					break
+				}
+			}
+
+			if existingMemNodeIndex != -1 {
+				// Update existing MemNode's NodeSet to include the new node
+				existingNodeSet := domain.NUMATune.MemNodes[existingMemNodeIndex].NodeSet
+				domain.NUMATune.MemNodes[existingMemNodeIndex].NodeSet = existingNodeSet + "," + strconv.Itoa(int(cell.Id))
+			} else {
+				// Create new MemNode
+				domain.NUMATune.MemNodes = append(domain.NUMATune.MemNodes, api.MemNode{
+					CellID:  uint32(virtualCellID),
+					Mode:    "strict",
+					NodeSet: strconv.Itoa(int(cell.Id)),
+				})
+			}
+			if hugepagesEnabled {
+				domain.MemoryBacking.HugePages.HugePage = append(domain.MemoryBacking.HugePages.HugePage, api.HugePage{
+					Size:    strconv.Itoa(int(hugepagesSize)),
+					Unit:    hugepagesUnit,
+					NodeSet: strconv.Itoa(virtualCellID),
+				})
+			}
 		}
 	}
 
-	if mod > 0 {
+	if hugepagesEnabled && mod > 0 {
 		for i := range domain.CPU.NUMA.Cells[:mod] {
 			domain.CPU.NUMA.Cells[i].Memory += hugepagesSize
 		}
 	}
 	if vmi.IsRealtimeEnabled() {
-		// RT settings when hugepages are enabled
 		domain.MemoryBacking.NoSharePages = &api.NoSharePages{}
 	}
 	return nil
