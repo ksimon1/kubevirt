@@ -376,6 +376,12 @@ func (p *AgentPoller) Stop() {
 func (p *AgentPoller) UpdateFromEvent(domainEvent *libvirt.DomainEventLifecycle, agentEvent *libvirt.DomainEventAgentLifecycle) {
 	switch {
 	case domainEvent != nil:
+		if domainEvent.Event == libvirt.DOMAIN_EVENT_CRASHED {
+			log.Log.Infof("Stopping agent poller for %s due to domain crash/guest panic", p.domainName)
+			p.agentStore.Store(agentConnected, false)
+			p.Stop()
+			return
+		}
 		if domainEvent.Event == libvirt.DOMAIN_EVENT_SUSPENDED {
 			log.Log.Infof("Stopping agent poller for %s due to domain suspend", p.domainName)
 			p.Stop()
