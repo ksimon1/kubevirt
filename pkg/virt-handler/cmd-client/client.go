@@ -114,6 +114,7 @@ type LauncherClient interface {
 	GetScreenshot(*v1.VirtualMachineInstance) (*cmdv1.ScreenshotResponse, error)
 	VirtualMachineBackup(vmi *v1.VirtualMachineInstance, options *backupv1.BackupOptions) error
 	RedefineCheckpoint(vmi *v1.VirtualMachineInstance, checkpoint *backupv1.BackupCheckpoint) (checkpointInvalid bool, err error)
+	SetGuestAgentPaused(paused bool) error
 }
 
 type VirtLauncherClient struct {
@@ -803,6 +804,17 @@ func (c *VirtLauncherClient) VirtualMachineBackup(vmi *v1.VirtualMachineInstance
 
 	err = handleError(err, "Backup", response)
 	return err
+}
+
+func (c *VirtLauncherClient) SetGuestAgentPaused(paused bool) error {
+	request := &cmdv1.GuestAgentPausedRequest{
+		Paused: paused,
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), shortTimeout)
+	defer cancel()
+
+	response, err := c.v1client.SetGuestAgentPaused(ctx, request)
+	return handleError(err, "SetGuestAgentPaused", response)
 }
 
 func (c *VirtLauncherClient) RedefineCheckpoint(vmi *v1.VirtualMachineInstance, checkpoint *backupv1.BackupCheckpoint) (checkpointInvalid bool, err error) {

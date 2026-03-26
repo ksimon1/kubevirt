@@ -39,6 +39,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -156,6 +157,7 @@ type DomainManager interface {
 	GetGuestOSInfo() *api.GuestOSInfo
 	Exec(string, string, []string, int32) (string, error)
 	GuestPing(string) error
+	SetGuestAgentPaused(paused bool)
 	MemoryDump(vmi *v1.VirtualMachineInstance, dumpPath string) error
 	BackupVirtualMachine(*v1.VirtualMachineInstance, *backupv1.BackupOptions) error
 	RedefineCheckpoint(*v1.VirtualMachineInstance, *backupv1.BackupCheckpoint) (checkpointInvalid bool, err error)
@@ -209,6 +211,10 @@ type LibvirtDomainManager struct {
 
 	hypervisorDeviceAvailable bool
 	hypervisorName            string
+
+	// guestAgentPaused indicates that GuestPing should always succeed without
+	// contacting the QEMU guest agent (controlled via kubevirt.io/pause-guest-agent-probe annotation).
+	guestAgentPaused atomic.Bool
 }
 
 type pausedVMIs struct {
@@ -628,7 +634,14 @@ func (l *LibvirtDomainManager) Exec(domainName, command string, args []string, t
 	return agent.GuestExec(l.virConn, domainName, command, args, timeoutSeconds)
 }
 
+func (l *LibvirtDomainManager) SetGuestAgentPaused(paused bool) {
+	l.guestAgentPaused.Store(paused)
+}
+
 func (l *LibvirtDomainManager) GuestPing(domainName string) error {
+	if l.guestAgentPaused.Load() {
+		return nil
+	}
 	pingCmd := `{"execute":"guest-ping"}`
 	_, err := l.virConn.QemuAgentCommand(pingCmd, domainName)
 	return err

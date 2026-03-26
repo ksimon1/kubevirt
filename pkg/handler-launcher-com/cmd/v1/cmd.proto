@@ -39,6 +39,7 @@ service Cmd {
   rpc GetScreenshot(VMIRequest) returns (ScreenshotResponse) {}
   rpc BackupVirtualMachine(BackupRequest) returns (Response) {}
   rpc RedefineCheckpoint(RedefineCheckpointRequest) returns (RedefineCheckpointResponse) {}
+  rpc SetGuestAgentPaused(GuestAgentPausedRequest) returns (Response) {}
 }
 
 message QemuVersionResponse {
@@ -238,4 +239,8 @@ message RedefineCheckpointRequest {
 message RedefineCheckpointResponse {
   Response response = 1;
   bool checkpointInvalid = 2;
+}
+
+message GuestAgentPausedRequest {
+  bool paused = 1;
 }

@@ -1104,6 +1104,11 @@ const (
 	// Used by functional tests to simulate virt-launcher crash looping
 	FuncTestLauncherFailFastAnnotation string = "kubevirt.io/func-test-virt-launcher-fail-fast"
 
+	// PauseGuestAgentAnnotation when set to "true" on a VMI, virt-handler communicates to
+	// virt-launcher that the guest agent readiness probe should always return success,
+	// bypassing actual QEMU guest agent communication.
+	PauseGuestAgentAnnotation string = "kubevirt.io/pause-guest-agent-probe"
+
 	// Used by functional tests to ignore backoff applied to migrations
 	FuncTestForceIgnoreMigrationBackoffAnnotation string = "kubevirt.io/func-test-ignore-migration-backoff"
 

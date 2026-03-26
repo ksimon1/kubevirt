@@ -351,6 +351,20 @@ func (mr *MockLauncherClientMockRecorder) MigrateVirtualMachine(vmi, options any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MigrateVirtualMachine", reflect.TypeOf((*MockLauncherClient)(nil).MigrateVirtualMachine), vmi, options)
 }
 
+// SetGuestAgentPaused mocks base method.
+func (m *MockLauncherClient) SetGuestAgentPaused(paused bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetGuestAgentPaused", paused)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetGuestAgentPaused indicates an expected call of SetGuestAgentPaused.
+func (mr *MockLauncherClientMockRecorder) SetGuestAgentPaused(paused any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetGuestAgentPaused", reflect.TypeOf((*MockLauncherClient)(nil).SetGuestAgentPaused), paused)
+}
+
 // PauseVirtualMachine mocks base method.
 func (m *MockLauncherClient) PauseVirtualMachine(vmi *v1.VirtualMachineInstance) error {
 	m.ctrl.T.Helper()

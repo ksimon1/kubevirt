@@ -2036,9 +2036,15 @@ func (c *VirtualMachineController) syncVirtualMachine(client cmdclient.LauncherC
 		if strings.Contains(err.Error(), "EFI OVMF rom missing") {
 			return &virtLauncherCriticalSecurebootError{fmt.Sprintf("mismatch of Secure Boot setting and bootloaders: %v", err)}
 		}
+		return err
 	}
 
-	return err
+	paused := vmi.Annotations[v1.PauseGuestAgentAnnotation] == "true"
+	if err := client.SetGuestAgentPaused(paused); err != nil {
+		log.Log.Object(vmi).Reason(err).Warning("Failed to sync guest agent pause state")
+	}
+
+	return nil
 }
 
 func (c *VirtualMachineController) getPreallocatedVolumes(vmi *v1.VirtualMachineInstance) []string {

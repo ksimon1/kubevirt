@@ -618,6 +618,11 @@ func (l *Launcher) GuestPing(ctx context.Context, request *cmdv1.GuestPingReques
 	return resp, nil
 }
 
+func (l *Launcher) SetGuestAgentPaused(_ context.Context, request *cmdv1.GuestAgentPausedRequest) (*cmdv1.Response, error) {
+	l.domainManager.SetGuestAgentPaused(request.Paused)
+	return &cmdv1.Response{Success: true}, nil
+}
+
 func RunServer(socketPath string,
 	domainManager virtwrap.DomainManager,
 	stopChan chan struct{},

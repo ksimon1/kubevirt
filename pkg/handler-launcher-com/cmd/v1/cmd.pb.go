@@ -46,6 +46,7 @@ It has these top-level messages:
 	BackupRequest
 	RedefineCheckpointRequest
 	RedefineCheckpointResponse
+	GuestAgentPausedRequest
 */
 package v1
 
@@ -1082,6 +1083,21 @@ func (m *RedefineCheckpointResponse) GetCheckpointInvalid() bool {
 	return false
 }
 
+type GuestAgentPausedRequest struct {
+	Paused bool `protobuf:"varint,1,opt,name=paused" json:"paused,omitempty"`
+}
+
+func (m *GuestAgentPausedRequest) Reset()         { *m = GuestAgentPausedRequest{} }
+func (m *GuestAgentPausedRequest) String() string { return proto.CompactTextString(m) }
+func (*GuestAgentPausedRequest) ProtoMessage()    {}
+
+func (m *GuestAgentPausedRequest) GetPaused() bool {
+	if m != nil {
+		return m.Paused
+	}
+	return false
+}
+
 func init() {
 	proto.RegisterType((*QemuVersionResponse)(nil), "kubevirt.cmd.v1.QemuVersionResponse")
 	proto.RegisterType((*VMI)(nil), "kubevirt.cmd.v1.VMI")
@@ -1167,6 +1183,7 @@ type CmdClient interface {
 	GetScreenshot(ctx context.Context, in *VMIRequest, opts ...grpc.CallOption) (*ScreenshotResponse, error)
 	BackupVirtualMachine(ctx context.Context, in *BackupRequest, opts ...grpc.CallOption) (*Response, error)
 	RedefineCheckpoint(ctx context.Context, in *RedefineCheckpointRequest, opts ...grpc.CallOption) (*RedefineCheckpointResponse, error)
+	SetGuestAgentPaused(ctx context.Context, in *GuestAgentPausedRequest, opts ...grpc.CallOption) (*Response, error)
 }
 
 type cmdClient struct {
@@ -1492,6 +1509,15 @@ func (c *cmdClient) RedefineCheckpoint(ctx context.Context, in *RedefineCheckpoi
 	return out, nil
 }
 
+func (c *cmdClient) SetGuestAgentPaused(ctx context.Context, in *GuestAgentPausedRequest, opts ...grpc.CallOption) (*Response, error) {
+	out := new(Response)
+	err := grpc.Invoke(ctx, "/kubevirt.cmd.v1.Cmd/SetGuestAgentPaused", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for Cmd service
 
 type CmdServer interface {
@@ -1530,6 +1556,7 @@ type CmdServer interface {
 	GetScreenshot(context.Context, *VMIRequest) (*ScreenshotResponse, error)
 	BackupVirtualMachine(context.Context, *BackupRequest) (*Response, error)
 	RedefineCheckpoint(context.Context, *RedefineCheckpointRequest) (*RedefineCheckpointResponse, error)
+	SetGuestAgentPaused(context.Context, *GuestAgentPausedRequest) (*Response, error)
 }
 
 func RegisterCmdServer(s *grpc.Server, srv CmdServer) {
@@ -2166,6 +2193,24 @@ func _Cmd_RedefineCheckpoint_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Cmd_SetGuestAgentPaused_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GuestAgentPausedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CmdServer).SetGuestAgentPaused(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/kubevirt.cmd.v1.Cmd/SetGuestAgentPaused",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CmdServer).SetGuestAgentPaused(ctx, req.(*GuestAgentPausedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Cmd_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "kubevirt.cmd.v1.Cmd",
 	HandlerType: (*CmdServer)(nil),
@@ -2309,6 +2354,10 @@ var _Cmd_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RedefineCheckpoint",
 			Handler:    _Cmd_RedefineCheckpoint_Handler,
+		},
+		{
+			MethodName: "SetGuestAgentPaused",
+			Handler:    _Cmd_SetGuestAgentPaused_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

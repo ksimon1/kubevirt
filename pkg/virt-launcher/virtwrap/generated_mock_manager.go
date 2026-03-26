@@ -292,6 +292,18 @@ func (mr *MockDomainManagerMockRecorder) GuestPing(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GuestPing", reflect.TypeOf((*MockDomainManager)(nil).GuestPing), arg0)
 }
 
+// SetGuestAgentPaused mocks base method.
+func (m *MockDomainManager) SetGuestAgentPaused(paused bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetGuestAgentPaused", paused)
+}
+
+// SetGuestAgentPaused indicates an expected call of SetGuestAgentPaused.
+func (mr *MockDomainManagerMockRecorder) SetGuestAgentPaused(paused any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetGuestAgentPaused", reflect.TypeOf((*MockDomainManager)(nil).SetGuestAgentPaused), paused)
+}
+
 // HotplugHostDevices mocks base method.
 func (m *MockDomainManager) HotplugHostDevices(vmi *v1.VirtualMachineInstance) error {
 	m.ctrl.T.Helper()
